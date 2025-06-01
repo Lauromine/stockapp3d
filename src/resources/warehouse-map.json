@@ -2,7 +2,26 @@
     "warehouses" : [
         { 
             "name": "H0",
-            "aisles": []
+            "aisles": [
+                {
+                    "name": "A",
+                    "racks": [
+                        {
+                            "name": "1",
+                            "floors": [
+                                {
+                                    "name": "A",
+                                    "slots": [
+                                        false,
+                                        false,
+                                        false
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }
