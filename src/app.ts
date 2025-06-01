@@ -1,6 +1,5 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import "@babylonjs/loaders/glTF";
 import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, PointerEventTypes, StandardMaterial, Color3, TransformNode, ActionManager, AxesViewer } from "@babylonjs/core";
 import { AbstractMesh } from "@babylonjs/core";
 import * as GUI from "@babylonjs/gui";
@@ -29,6 +28,26 @@ class App {
 
         this.createWarehouseMap(this.createJsonWarehouseData(), scene);
         
+        const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
+        const text: GUI.TextBlock = new GUI.TextBlock("textblock", "Super Papou Stock App")
+        text.color = "white";
+        text.fontSize = "24";
+        text.top = "50px";
+        text.left = "50px";
+        text.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        text.textVerticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        advancedTexture.addControl(text);
+
+        const advancedTextureSelectedSlot = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
+        const textSelectedSlot: GUI.TextBlock = new GUI.TextBlock("textblock", "Cliquer sur un bloc")
+        textSelectedSlot.color = "white";
+        textSelectedSlot.fontSize = "24";
+        textSelectedSlot.top = "50px";
+        textSelectedSlot.left = "-50px";
+        textSelectedSlot.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        textSelectedSlot.textVerticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        advancedTextureSelectedSlot.addControl(textSelectedSlot);
+
         scene.onPointerObservable.add((pointerInfo) => {
             switch(pointerInfo.type) {
                 case PointerEventTypes.POINTERDOWN:
@@ -54,24 +73,14 @@ class App {
 
         const onPointerDown = (pickedMesh:AbstractMesh) => {
             console.log("pointerDown, " + pickedMesh.name);
-            pickedMesh.material = beingClickedMaterial; 
+            pickedMesh.material = beingClickedMaterial;
+            textSelectedSlot.text = pickedMesh.name;
         }
 
         const onPointerUp = (pickedMesh:AbstractMesh) => {
             console.log("pointerUp, " + pickedMesh.name);
             pickedMesh.material = alreadyClickedMaterial; 
         }
-
-        const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
-        const text: GUI.TextBlock = new GUI.TextBlock("textblock", "Super Papou Stock App")
-        text.color = "white";
-        text.fontSize = "24";
-        text.top = "50px";
-        text.left = "50px";
-        text.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        text.textVerticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
-
-        advancedTexture.addControl(text);
 
         // hide/show the Inspector
         window.addEventListener("keydown", (ev) => {
@@ -114,8 +123,11 @@ class App {
             warehouse.aisles.push(aisle);
 
             for(let rackIndex = 1; rackIndex <= RACKS_COUNT; rackIndex++) {
-                //Aisle A only has even numbers
+                //Aisle A doesnt have odd numbers
                 if(AISLES_LETTERS[aisleIndex] == "A" && rackIndex % 2 != 0) 
+                    continue;
+                //Aisle F doesn't have even numbers
+                if(AISLES_LETTERS[aisleIndex] == "F" && rackIndex % 2 == 0)
                     continue;
                 let rack = {
                     name: `${rackIndex}`,
@@ -126,18 +138,18 @@ class App {
                 let floorsCount = (rackIndex >= 15) ? FLOORS_COUNT_SPECIAL : FLOORS_COUNT;                
                 for(let k = 0; k < floorsCount; k++) {
                     let floor = {
-                        name: `${rackIndex}`,
+                        name: `${FLOOR_LETTERS[k]}`,
                         slots: []
                     }
                     rack.floors.push(floor);
 
-                    for(let slotIndex = 0; slotIndex < SLOTS_COUNT; slotIndex++) {
+                    for(let slotIndex = 1; slotIndex <= SLOTS_COUNT; slotIndex++) {
                         let slot = {
                             name: `Allée ${aisle.name} - Travée ${rack.name} - Etage ${floor.name} - Emplacement ${slotIndex}`,
-                            shortName: `${warehouse.name, aisle.name, rack.name, floor.name, slotIndex}`,
+                            shortName: `${warehouse.name}${aisle.name}${rack.name}${floor.name}${slotIndex}`,
                             available: true
                         }
-                        floor.slots.push(floor);
+                        floor.slots.push(slot);
                     }
                 }
             }
@@ -146,22 +158,22 @@ class App {
         return warehouse;
     }
 
-    createWarehouseMap = function(pWarehouseData, scene) {
+    createWarehouseMap = function(warehouseData, scene): void {
         let cubes: Mesh[] = []
-        const aislesCount: number = 7
-        const racksCount: number = 16
-        const floorsCount: number = 4
 
-        const cubeSize = 1;
-        const offset = 2;
-        const AISLES_DIRECTION = -1;
-        const AISLES_LETTERS = 'ABCDEFGHIJKL';
-        const RACKS_DIRECTION = 1;
-        const FLOORS_DIRECTION = -1;
+        const SLOT_SIZE: number = 0.9;
+        const AISLES_OFFSET: number = 2.1;
+        const AISLES_DIRECTION: number = -1;
+        const RACKS_OFFSET: number = 1;
+        const RACKS_DIRECTION: number = 1;
+        const FLOORS_DIRECTION: number = -1;
+        const SLOTS_PER_FLOOR: number = 3;
 
-        for(let i = 0; i < aislesCount; i++) {
-            let aisleTransform: TransformNode = new TransformNode(`Allée - ${i}`, scene);
-            aisleTransform.position.x = (i * cubeSize + i * offset) * AISLES_DIRECTION;
+        
+        for(let i = 0; i < warehouseData.aisles.length; i++) {
+            let aisle = warehouseData.aisles[i];
+            let aisleTransform: TransformNode = new TransformNode(`Allée - ${aisle.name}`, scene);
+            aisleTransform.position.x = (i * SLOT_SIZE + i * AISLES_OFFSET) * AISLES_DIRECTION;
 
             let plane: Mesh = MeshBuilder.CreatePlane('label', {size : 2});
             plane.parent = aisleTransform;
@@ -169,24 +181,33 @@ class App {
             plane.isPickable = false;
 
             let advancedTexture: GUI.AdvancedDynamicTexture = GUI.AdvancedDynamicTexture.CreateForMesh(plane);
-            let textLabel: GUI.TextBlock = new GUI.TextBlock("textLabel", `Allée - ${AISLES_LETTERS[i]}`)
+            let textLabel: GUI.TextBlock = new GUI.TextBlock("textLabel", `Allée - ${aisle.name}`)
             textLabel.color = "white";
             textLabel.fontSize = 160;
             textLabel.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             textLabel.textVerticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
             advancedTexture.addControl(textLabel);
 
-            for(let j = 0; j < racksCount; j++) {
-                let rackTransform: TransformNode = new TransformNode(`Travée - ${j}`, scene);
+            for(let rackIndex = 0; rackIndex < aisle.racks.length; rackIndex++) {
+                let rack = aisle.racks[rackIndex];
+                //The index of the rack in real life
+                let actualRackIndex = Number.parseInt(rack.name);
+                let rackTransform: TransformNode = new TransformNode(`Travée - ${rack.name}`, scene);
                 rackTransform.parent = aisleTransform;
-                rackTransform.position.y = j * 4 * cubeSize * RACKS_DIRECTION;
-                for(let k = 0; k < floorsCount; k++) {
-                    let floorTransform: TransformNode = new TransformNode(`Etage - ${k}`, scene);
-                    floorTransform.parent = rackTransform;
-                    floorTransform.position.z = k * 2 * cubeSize * FLOORS_DIRECTION;
-                    for(let slotIndex = 0; slotIndex < 3; slotIndex++) {
 
-                        let cube: Mesh = MeshBuilder.CreateBox(`Aisle${i}-Rack${j}-Floor${k}-Slot${slotIndex}`, {size: cubeSize});
+                //The row in real life
+                let actualRow = Math.floor(actualRackIndex / 2 + actualRackIndex % 2) - 1;
+                rackTransform.position.y = (actualRow * SLOT_SIZE * SLOTS_PER_FLOOR + actualRow * RACKS_OFFSET) * RACKS_DIRECTION;
+                //If rack is even, put in on the left, it it's odd, put in on right
+                rackTransform.position.x = (actualRackIndex % 2 == 0) ? -1 : 1;
+                for(let k = 0; k < rack.floors.length; k++) {
+                    let floor = rack.floors[k];
+                    let floorTransform: TransformNode = new TransformNode(`Etage - ${floor.name}`, scene);
+                    floorTransform.parent = rackTransform;
+                    floorTransform.position.z = k * 2 * SLOT_SIZE * FLOORS_DIRECTION;
+
+                    for(let slotIndex = 0; slotIndex < 3; slotIndex++) {
+                        let cube: Mesh = MeshBuilder.CreateBox(`${floor.slots[slotIndex].shortName}`, {size: SLOT_SIZE});
                         cube.parent = floorTransform;
                         cube.position.y = slotIndex;
                         cubes = [...cubes, cube]
