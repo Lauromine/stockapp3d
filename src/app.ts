@@ -1,9 +1,10 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, PointerEventTypes, StandardMaterial, Color3 } from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, MeshBuilder, PointerEventTypes, StandardMaterial, Color3, TransformNode } from "@babylonjs/core";
 import { AbstractMesh } from "@babylonjs/core";
 import * as GUI from "@babylonjs/gui";
+import warehouses from "./resources/warehouse-map.json"
 
 class App {
     constructor() {
@@ -27,13 +28,33 @@ class App {
         const gridHeight: number = 9;
 
         let cubes: Mesh[] = []
-        for(let i = 0; i <= gridWidth; i++) {
-            for(let j = 0; j <= gridHeight; j++) {
-                let cube: Mesh = MeshBuilder.CreateBox(`box${cubes.length}`, {size: 1}, scene);
-                cube.position.x = i * 2;
-                cube.position.y = j * 2;
-                cube.position.z = -2 + Math.random() * 4;
-                cubes = [...cubes, cube]
+        const aislesCount: number = 7
+        const racksCount: number = 16
+        const floorsCount: number = 4
+
+        
+        const cubeSize = 1;
+        const offset = 2;
+        
+        for(let i = 0; i < aislesCount; i++) {
+            let aisleTransform: TransformNode = new TransformNode(`Allée - ${i}`, scene);
+            aisleTransform.position.x = i * cubeSize + i * offset;
+            for(let j = 0; j < racksCount; j++) {
+                let rackTransform: TransformNode = new TransformNode(`Travée - ${j}`, scene);
+                rackTransform.parent = aisleTransform;
+                rackTransform.position.y = j * (4 * cubeSize);
+                for(let k = 0; k < floorsCount; k++) {
+                    let floorTransform: TransformNode = new TransformNode(`Etage - ${k}`, scene);
+                    floorTransform.parent = rackTransform;
+                    floorTransform.position.z = k * (2 * cubeSize);
+                    for(let slotIndex = 0; slotIndex < 3; slotIndex++) {
+
+                        let cube: Mesh = MeshBuilder.CreateBox(`Aisle${i}-Rack${j}-Floor${k}-Slot${slotIndex}`, {size: cubeSize});
+                        cube.parent = floorTransform;
+                        cube.position.y = slotIndex;
+                        cubes = [...cubes, cube]
+                    }
+                }
             }
         }
         
@@ -51,6 +72,8 @@ class App {
                 break;
             }
         })
+
+        console.log(warehouses, "ok")
 
         const beingClickedMaterial:StandardMaterial = new StandardMaterial("beingClickedMaterialmat")
         beingClickedMaterial.diffuseColor = new Color3(1, 0, 0);
